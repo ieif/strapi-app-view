@@ -1,54 +1,108 @@
-import { createServer as createViteServer } from "vite";
+import fs from "node:fs";
+import path from "node:path";
+import { fileURLToPath } from "node:url";
 import Koa from "koa";
+import connect from "koa-connect";
+import koaCompress from "koa-compress";
+import koaStatic from "koa-static";
 
-const app = new Koa();
-const port = 8080;
-// response
+const isTest = process.env.VITEST;
 
-async function createServer() {
-   const vite = await createViteServer({
-      server: { middlewareMode: true },
-      appType: "custom",
-   });
-   app.use(vite.middlewares);
+export async function createServer(root = process.cwd(), isProd = process.env.NODE_ENV === "production", hmrPort) {
+   const __dirname = path.dirname(fileURLToPath(import.meta.url));
+   const resolve = (p) => path.resolve(__dirname, p);
 
-   app.use("*", async (req, res) => {
-      // 服务 index.html - 下面我们来处理这个问题
-      const url = req.originalUrl;
+   const indexProd = isProd ? fs.readFileSync(resolve("dist/client/index.html"), "utf-8") : "";
+
+   const manifest = isProd ? JSON.parse(fs.readFileSync(resolve("dist/client/ssr-manifest.json"), "utf-8")) : {};
+
+   const app = new Koa();
+
+   /**
+    * @type {import('vite').ViteDevServer}
+    */
+   let vite;
+   if (!isProd) {
+      vite = await (
+         await import("vite")
+      ).createServer({
+         base: "/",
+         root,
+         logLevel: isTest ? "error" : "info",
+         server: {
+            middlewareMode: true,
+            watch: {
+               // During tests we edit the files too fast and sometimes chokidar
+               // misses change events, so enforce polling for consistency
+               usePolling: true,
+               interval: 100,
+            },
+            hmr: {
+               port: hmrPort,
+            },
+         },
+         appType: "custom",
+      });
+      // use vite's connect instance as middleware
+      app.use(connect(vite.middlewares));
+   } else {
+      /* app.use(
+         koaCompress({
+            filter(content_type) {
+               return /text/i.test(content_type);
+            },
+            threshold: 2048,
+            gzip: {
+               flush: require("zlib").constants.Z_SYNC_FLUSH,
+            },
+            deflate: {
+               flush: require("zlib").constants.Z_SYNC_FLUSH,
+            },
+            br: false, // disable brotli
+         }),
+      ); */
+      app.use(koaStatic("./dist/client/", {}));
+      //app.use((await import("compression")).default());
+  /*     app.use(
+         (await import("koa-static")).default(resolve("dist/client"), {
+            index: false,
+         }),
+      ); */
+   }
+
+   app.use(async (ctx, next) => {
       try {
-         // 1. 读取 index.html
-         let template = fs.readFileSync(path.resolve(__dirname, "index.html"), "utf-8");
-         // 2. 应用 Vite HTML 转换。这将会注入 Vite HMR 客户端，
-         //    同时也会从 Vite 插件应用 HTML 转换。
-         //    例如：@vitejs/plugin-react 中的 global preambles
-         template = await vite.transformIndexHtml(url, template);
+         const url = ctx.url.replace("/test/", "/");
+         let template, render;
+         console.info("req", url, isProd);
+         if (!isProd) {
+            // always read fresh template in dev
+            template = fs.readFileSync(resolve("index.html"), "utf-8");
+            template = await vite.transformIndexHtml(url, template);
+            render = (await vite.ssrLoadModule("/src/entry-server.js")).render;
+         } else {
+            template = indexProd;
+            // @ts-ignore
+            render = (await import("./dist/server/entry-server.js")).render;
+         }
 
-         // 3. 加载服务器入口。vite.ssrLoadModule 将自动转换
-         //    你的 ESM 源码使之可以在 Node.js 中运行！无需打包
-         //    并提供类似 HMR 的根据情况随时失效。
-         const { render } = await vite.ssrLoadModule("/src/entry-server.js");
-
-         // 4. 渲染应用的 HTML。这假设 entry-server.js 导出的 `render`
-         //    函数调用了适当的 SSR 框架 API。
-         //    例如 ReactDOMServer.renderToString()
-         const appHtml = await render(url);
-
-         // 5. 注入渲染后的应用程序 HTML 到模板中。
-         const html = template.replace(`<!--ssr-outlet-->`, appHtml);
-
-         // 6. 返回渲染后的 HTML。
+         const [appHtml, preloadLinks] = await render(url, manifest);
+         const html = template.replace(`<!--preload-links-->`, preloadLinks).replace(`<!--app-html-->`, appHtml);
          res.status(200).set({ "Content-Type": "text/html" }).end(html);
       } catch (e) {
-         // 如果捕获到了一个错误，让 Vite 来修复该堆栈，这样它就可以映射回
-         // 你的实际源码中。
-         vite.ssrFixStacktrace(e);
-         next(e);
+         vite && vite.ssrFixStacktrace(e);
+         console.log(e.stack);
+         res.status(500).end(e.stack);
       }
    });
 
-   app.listen(port, (s) => {
-      let address = app.server;
-      console.info("port", port);
-   });
+   return { app, vite };
 }
-createServer();
+
+if (!isTest) {
+   createServer().then(({ app }) =>
+      app.listen(8080, () => {
+         console.log("http://localhost:8080");
+      }),
+   );
+}

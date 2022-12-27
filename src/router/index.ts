@@ -1,4 +1,4 @@
-import { createRouter, createWebHistory} from "vue-router"
+import { createRouter as _createRouter, createWebHistory, createMemoryHistory } from "vue-router";
 //import cookies from "js-cookie";
 import config from "../config";
 import routes from "./routes";
@@ -7,25 +7,25 @@ const baseUrl = ("/" + config.baseUrl + "/").replace(/[\/]{2,}/, "/"); //config.
 //Vue.prototype.$viewUrls = viewUrls;
 
 function getRouter(path: string, routes: any): any {
-  for (let v of routes) {
-    if (path == v.path || path == v.name) return v;
-    if (v.children && v.children.length > 0) {
-      let ret = getRouter(path, v.children);
-      if (ret) return ret;
-    }
-  }
-  return undefined;
+   for (let v of routes) {
+      if (path == v.path || path == v.name) return v;
+      if (v.children && v.children.length > 0) {
+         let ret = getRouter(path, v.children);
+         if (ret) return ret;
+      }
+   }
+   return undefined;
 }
 
-let router = createRouter({
+/* let router = _createRouter({
   history: createWebHistory(),
   routes: routes
 });
-
-router.beforeEach(async (to, from, next) => {
+ */
+/* router.beforeEach(async (to, from, next) => {
   let isLogin = false;// = !!cookies.get("token-admin");
   console.info("isLogin===", isLogin, to.name);
-/*   if (to.name == "login") {
+   if (to.name == "login") {
     return isLogin ? next("/home.html") : next();
   }
   if (isLogin) {
@@ -35,13 +35,20 @@ router.beforeEach(async (to, from, next) => {
     next({
       name: "login", // 跳转到登录页
     });
-  } */
+  } 
   next();
 });
 
-router.afterEach((route) => {});
+router.afterEach((route) => {}); */
 
 //if (location.pathname.startsWith("/admin-view/index.html")) location.href = "/admin-view/home.html";
 //console.info("-----", location.pathname == "/admin-view/index.html", location.pathname);
 
-export default router;
+export function createRouter() {
+   return _createRouter({
+      // use appropriate history implementation for server/client
+      // import.meta.env.SSR is injected by Vite.
+      history: import.meta.env.SSR ? createMemoryHistory("/") : createWebHistory("/"),
+      routes,
+   });
+}
