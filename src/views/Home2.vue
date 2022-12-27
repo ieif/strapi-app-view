@@ -10,7 +10,7 @@
       <div>
           <h2>article list</h2>
           <ul>
-              <li v-for="item in artis">
+              <li v-for="(item) in artis">
                   {{item.id}} {{item.title}} 
                   <img v-if="item.logo" :src="item.logo" />
                   <div>
@@ -23,9 +23,15 @@
       </div>
    </div>
 </template>
-<script lang="ts">
+<script>
 import gql from "graphql-tag";
 export default {
+   data(){
+      return {
+         hello: "",
+         artis: []
+      }
+   },
    apollo: {
       hello: gql`
          query {

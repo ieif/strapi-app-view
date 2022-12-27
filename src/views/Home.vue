@@ -23,7 +23,7 @@
   <p class="read-the-docs">Click on the Vite and Vue logos to learn more</p>
 </template>
 
-<script lang="ts">
+<script>
 import { ref } from "vue";
 export default {
   data: ()=>{

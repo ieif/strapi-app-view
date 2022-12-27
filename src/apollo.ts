@@ -1,4 +1,3 @@
-//import { createHttpLink } from "apollo-link-http";
 import { InMemoryCache, ApolloClient } from "@apollo/client";
 import { createApolloProvider } from "@vue/apollo-option";
 
@@ -17,7 +16,7 @@ const apolloClient = new ApolloClient({
    cache,
 });
 
-export default apolloClient;
+//export default apolloClient;
 
 export const provider = createApolloProvider({
    defaultClient: apolloClient,
