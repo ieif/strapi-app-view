@@ -50,8 +50,9 @@ export default defineConfig(async ({ command, mode, ssrBuild }) => {
                   }
                   return `${extType}/[name]-[hash][extname]`;
                },
-               chunkFileNames: "js/[name]-[hash].js",
+               chunkFileNames: "js/chunk-[name]-[hash].js",
                entryFileNames: (a)=>{
+                  if(a.name == "server") return "js/[name].js";
                   return "js/[name]-[hash].js";
                },
             },
