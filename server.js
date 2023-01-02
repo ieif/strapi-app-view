@@ -63,7 +63,7 @@ export async function createServer(root = process.cwd(), isProd = process.env.NO
       ); */
       app.use(koaStatic("./dist/client/", {}));
       //app.use((await import("compression")).default());
-  /*     app.use(
+      /*     app.use(
          (await import("koa-static")).default(resolve("dist/client"), {
             index: false,
          }),
@@ -72,27 +72,32 @@ export async function createServer(root = process.cwd(), isProd = process.env.NO
 
    app.use(async (ctx, next) => {
       try {
-         const url = ctx.url.replace("/test/", "/");
+         const url = ctx.url;//.replace(/\/[a-z0-9_-]+\.html/, "/index.html");
          let template, render;
          console.info("req", url, isProd);
-         if (!isProd) {
+
+         if (isProd) {
+            //生产环境
+            template = indexProd;
+            // @ts-ignore
+            render = (await import("./dist/server/js/server.js")).render;
+         } else {
             // always read fresh template in dev
             template = fs.readFileSync(resolve("index.html"), "utf-8");
             template = await vite.transformIndexHtml(url, template);
             render = (await vite.ssrLoadModule("/src/server.js")).render;
-         } else {
-            template = indexProd;
-            // @ts-ignore
-            render = (await import("./dist/server/js/server.js")).render;
          }
 
          const [appHtml, preloadLinks] = await render(url, manifest);
          const html = template.replace(`<!--preload-links-->`, preloadLinks).replace(`<!--app-html-->`, appHtml);
-         res.status(200).set({ "Content-Type": "text/html" }).end(html);
+         ctx.status = 200;
+         ctx.set({ "Content-Type": "text/html" });
+         ctx.body = html;
       } catch (e) {
          vite && vite.ssrFixStacktrace(e);
          console.log(e.stack);
-         res.status(500).end(e.stack);
+         ctx.status = 500;
+         ctx.body = e.stack;
       }
    });
 
