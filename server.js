@@ -22,30 +22,7 @@ export async function createServer(root = process.cwd(), isProd = process.env.NO
     * @type {import('vite').ViteDevServer}
     */
    let vite;
-   if (!isProd) {
-      vite = await (
-         await import("vite")
-      ).createServer({
-         base: "/",
-         root,
-         logLevel: isTest ? "error" : "info",
-         server: {
-            middlewareMode: true,
-            watch: {
-               // During tests we edit the files too fast and sometimes chokidar
-               // misses change events, so enforce polling for consistency
-               usePolling: true,
-               interval: 100,
-            },
-            hmr: {
-               port: hmrPort,
-            },
-         },
-         appType: "custom",
-      });
-      // use vite's connect instance as middleware
-      app.use(connect(vite.middlewares));
-   } else {
+   if (isProd) {
       /* app.use(
          koaCompress({
             filter(content_type) {
@@ -68,14 +45,36 @@ export async function createServer(root = process.cwd(), isProd = process.env.NO
             index: false,
          }),
       ); */
+   } else {
+      vite = await (
+         await import("vite")
+      ).createServer({
+         base: "/",
+         root,
+         logLevel: isTest ? "error" : "info",
+         server: {
+            middlewareMode: true,
+            watch: {
+               // During tests we edit the files too fast and sometimes chokidar
+               // misses change events, so enforce polling for consistency
+               usePolling: true,
+               interval: 100,
+            },
+            hmr: {
+               port: hmrPort,
+            },
+         },
+         appType: "custom",
+      });
+      // use vite's connect instance as middleware
+      app.use(connect(vite.middlewares));
    }
 
    app.use(async (ctx, next) => {
       try {
-         const url = ctx.url;//.replace(/\/[a-z0-9_-]+\.html/, "/index.html");
+         const url = ctx.url; //.replace(/\/[a-z0-9_-]+\.html/, "/index.html");
          let template, render;
          console.info("req", url, isProd);
-
          if (isProd) {
             //生产环境
             template = indexProd;
@@ -87,7 +86,6 @@ export async function createServer(root = process.cwd(), isProd = process.env.NO
             template = await vite.transformIndexHtml(url, template);
             render = (await vite.ssrLoadModule("/src/server.js")).render;
          }
-
          const [appHtml, preloadLinks] = await render(url, manifest);
          const html = template.replace(`<!--preload-links-->`, preloadLinks).replace(`<!--app-html-->`, appHtml);
          ctx.status = 200;

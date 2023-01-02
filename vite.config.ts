@@ -11,6 +11,7 @@ const myHttpServerPlugin = () => ({
          server.middlewares.use((req, res, next) => {
             if (/^\/index\.html/i.test(req.url)) return next();
             req.url = req.url.replace(/^\/.*\.html/, "/index.html");
+            console.info("req", req.url);
             return next();
          });
       };
@@ -22,7 +23,7 @@ export default defineConfig(async ({ command, mode, ssrBuild }) => {
    console.info("env", mode);
    let config: any = {
       define: {
-         __APP_ENV__: mode,
+         //__APP_ENV__: mode,
       },
       plugins: [vue(), myHttpServerPlugin()],
       server: {

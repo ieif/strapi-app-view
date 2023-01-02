@@ -17,7 +17,7 @@ app.use(router);
 app.mount("#app"); */
 
 export function createApp() {
-   const app = vue.createSSRApp(App);
+   const app = import.meta.env.SSR ? vue.createSSRApp(App) : vue.createApp(App, {  });
    app.use(pinia.createPinia());
    app.use(apollo.provider);
    const router = createRouter();
