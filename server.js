@@ -79,11 +79,11 @@ export async function createServer(root = process.cwd(), isProd = process.env.NO
             // always read fresh template in dev
             template = fs.readFileSync(resolve("index.html"), "utf-8");
             template = await vite.transformIndexHtml(url, template);
-            render = (await vite.ssrLoadModule("/src/entry-server.js")).render;
+            render = (await vite.ssrLoadModule("/src/server.js")).render;
          } else {
             template = indexProd;
             // @ts-ignore
-            render = (await import("./dist/server/entry-server.js")).render;
+            render = (await import("./dist/server/js/server.js")).render;
          }
 
          const [appHtml, preloadLinks] = await render(url, manifest);
