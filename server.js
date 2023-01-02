@@ -3,11 +3,11 @@ import path from "node:path";
 import { fileURLToPath } from "node:url";
 import Koa from "koa";
 import connect from "koa-connect";
-import koaCompress from "koa-compress";
+//import koaCompress from "koa-compress";
 import koaStatic from "koa-static";
+import * as vite from "vite";
 
-const isTest = process.env.VITEST;
-
+//const isTest = process.env.VITEST;
 export async function createServer(root = process.cwd(), isProd = process.env.NODE_ENV === "production", hmrPort) {
    const __dirname = path.dirname(fileURLToPath(import.meta.url));
    const resolve = (p) => path.resolve(__dirname, p);
@@ -21,7 +21,7 @@ export async function createServer(root = process.cwd(), isProd = process.env.NO
    /**
     * @type {import('vite').ViteDevServer}
     */
-   let vite;
+   let viteServer;
    if (isProd) {
       /* app.use(
          koaCompress({
@@ -46,12 +46,10 @@ export async function createServer(root = process.cwd(), isProd = process.env.NO
          }),
       ); */
    } else {
-      vite = await (
-         await import("vite")
-      ).createServer({
+      viteServer = await vite.createServer({
          base: "/",
          root,
-         logLevel: isTest ? "error" : "info",
+         logLevel: "info",
          server: {
             middlewareMode: true,
             watch: {
@@ -67,7 +65,7 @@ export async function createServer(root = process.cwd(), isProd = process.env.NO
          appType: "custom",
       });
       // use vite's connect instance as middleware
-      app.use(connect(vite.middlewares));
+      app.use(connect(viteServer.middlewares));
    }
 
    app.use(async (ctx, next) => {
@@ -83,8 +81,8 @@ export async function createServer(root = process.cwd(), isProd = process.env.NO
          } else {
             // always read fresh template in dev
             template = fs.readFileSync(resolve("index.html"), "utf-8");
-            template = await vite.transformIndexHtml(url, template);
-            render = (await vite.ssrLoadModule("/src/server.js")).render;
+            template = await viteServer.transformIndexHtml(url, template);
+            render = (await viteServer.ssrLoadModule("/src/server.js")).render;
          }
          const [appHtml, preloadLinks] = await render(url, manifest);
          //console.info("render", url, appHtml);
@@ -101,13 +99,11 @@ export async function createServer(root = process.cwd(), isProd = process.env.NO
       }
    });
 
-   return { app, vite };
+   return { app, vite: viteServer };
 }
 
-if (!isTest) {
-   createServer().then(({ app }) =>
-      app.listen(8080, () => {
-         console.log("http://localhost:8080");
-      }),
-   );
-}
+createServer().then(({ app }) =>
+   app.listen(8080, () => {
+      console.log("http://localhost:8080");
+   }),
+);
