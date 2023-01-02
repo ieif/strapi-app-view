@@ -87,13 +87,15 @@ export async function createServer(root = process.cwd(), isProd = process.env.NO
             render = (await vite.ssrLoadModule("/src/server.js")).render;
          }
          const [appHtml, preloadLinks] = await render(url, manifest);
-         const html = template.replace(`<!--preload-links-->`, preloadLinks).replace(`<!--app-html-->`, appHtml);
+         //console.info("render", url, appHtml);
+         let html = template.replace(`<!--ssr-outlet-->`, appHtml);
+         html = html.replace(`<!--preload-links-->`, preloadLinks);
          ctx.status = 200;
          ctx.set({ "Content-Type": "text/html" });
          ctx.body = html;
       } catch (e) {
-         vite && vite.ssrFixStacktrace(e);
-         console.log(e.stack);
+         //vite && vite.ssrFixStacktrace(e);
+         //console.log(e.stack);
          ctx.status = 500;
          ctx.body = e.stack;
       }

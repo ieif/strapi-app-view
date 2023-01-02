@@ -5,7 +5,7 @@
   "type": "module",
   "scripts": {
     "start": "cross-env NODE_ENV=production node server.js",
-    "dev": "cross-env NODE_ENV=development node server.js",
+    "dev": "cross-env NODE_ENV=development vite",
     "dev-vite": "vite",
     "buildxxxx": "vue-tsc && vite build",
     "buildxxx": "cross-env NODE_ENV=production vite build",
@@ -20,6 +20,7 @@
     "@apollo/client": "^3.7.3",
     "@koa/router": "^12.0.0",
     "@vue/apollo-option": "^4.0.0-alpha.20",
+    "axios": "^1.2.2",
     "core-js": "^3.6.4",
     "dayjs": "^1.11.7",
     "graphql": "^14.6.0",
