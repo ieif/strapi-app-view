@@ -36,6 +36,16 @@ const routes = [
             meta: {
                //requiresAuth: true, // 是否需要登录
             },
+         },
+         {
+            path: "/list.html",
+            name: "list",
+            title: "列表",
+            component: () => import("../views/List.vue"),
+            //icon: 'icon-wujiaoxing',
+            meta: {
+               //requiresAuth: true, // 是否需要登录
+            },
          }
       ],
    },
